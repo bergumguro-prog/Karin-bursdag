@@ -1,4 +1,5 @@
 import { api, ApiError, countTo, escapeHtml, guestToken, ornament, subscribe, toast, transition } from './api.js';
+import { mountScoreboard } from './scoreboard.js';
 import { burst, goldRain, initBurst, startBackground } from './sparkles.js';
 
 const view = document.getElementById('view');
@@ -143,8 +144,36 @@ function renderMine({ me, partner, pair, rank, pairCount }) {
   else show(key, build(), fill);
 }
 
+// ---------------------------------------------------------------------------
+// Scoreboard and navigation
+// ---------------------------------------------------------------------------
+
+const route = () => (['#/toppliste', '#/tv'].includes(location.hash) ? location.hash : '#/');
+
+let board = null;
+
+function renderBoard(tv) {
+  const screen = tv ? 'tv' : 'board';
+  if (app.screen === screen) return board?.update(app.state);
+  show(screen, '', () => {
+    board = mountScoreboard(view, { myId: app.myId, tv });
+    if (app.state) board.update(app.state);
+  });
+}
+
+function renderTabbar() {
+  const bar = document.querySelector('.tabbar');
+  const current = route();
+  bar.hidden = current === '#/tv';
+  bar.innerHTML = `
+    <a href="#/" ${current === '#/' ? 'aria-current="page"' : ''}>${app.myId ? 'Meg' : 'Bli med'}</a>
+    <a href="#/toppliste" ${current === '#/toppliste' ? 'aria-current="page"' : ''}>Toppliste</a>`;
+}
+
 function render() {
   if (app.revealing) return;
+  renderTabbar();
+  if (route() !== '#/') return renderBoard(route() === '#/tv');
   if (!app.myId) return renderWelcome();
   if (!app.state) return;
   const info = mine();
@@ -152,6 +181,7 @@ function render() {
     // Removed by an admin
     guestToken.set(null);
     app.myId = null;
+    renderTabbar();
     return renderWelcome();
   }
   if (!info.partner) return renderWaiting(info);
@@ -256,6 +286,7 @@ async function onState(state) {
 
 function onPoints(events) {
   const info = mine();
+  if (route() === '#/tv' && events.some((e) => e.delta > 0)) burst({ y: innerHeight * 0.35, power: 1.5 });
   for (const event of events) {
     toast(event);
     const ours = info && (event.guestId === info.me.id || event.guestId === info.partner?.id);
@@ -280,7 +311,8 @@ async function boot() {
   initBurst(document.getElementById('burst'));
   document.body.insertAdjacentHTML(
     'beforeend',
-    `<div class="offline">Kobler til…</div>
+    `<nav class="tabbar" aria-label="Meny"></nav>
+     <div class="offline">Kobler til…</div>
      <a class="admin-link" href="/admin" aria-label="Admin"><svg viewBox="0 0 24 24"><path fill="currentColor" d="M12 0c.6 6.4 5.6 11.4 12 12-6.4.6-11.4 5.6-12 12-.6-6.4-5.6-11.4-12-12C6.4 11.4 11.4 6.4 12 0z"/></svg></a>`,
   );
 
@@ -298,7 +330,8 @@ async function boot() {
     }
   }
 
-  if (!app.myId) renderWelcome();
+  addEventListener('hashchange', render);
+  if (!app.myId || route() !== '#/') render();
   subscribe({ state: onState, points: onPoints, connection: onConnection });
 }
 
