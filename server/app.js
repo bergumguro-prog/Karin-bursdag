@@ -85,7 +85,7 @@ export function createApp({
 
   app.use('/api/admin', admin);
 
-  app.use(express.static(PUBLIC_DIR));
+  app.use(express.static(PUBLIC_DIR, { extensions: ['html'] }));
 
   app.use((err, _req, res, _next) => {
     if (err instanceof StoreError) return res.status(err.status).json({ error: err.message });
