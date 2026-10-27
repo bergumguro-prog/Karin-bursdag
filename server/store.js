@@ -2,6 +2,8 @@ import { randomBytes, randomInt } from 'node:crypto';
 import { transaction } from './db.js';
 
 export const MAX_NAME_LENGTH = 40;
+export const MAX_POINTS_PER_EVENT = 1000;
+export const FEED_LENGTH = 15;
 
 export class StoreError extends Error {
   constructor(status, message) {
@@ -28,6 +30,16 @@ export function createStore(db, { pick = (n) => randomInt(n) } = {}) {
     insertPair: db.prepare('INSERT INTO pairs DEFAULT VALUES'),
     setPair: db.prepare('UPDATE guests SET pair_id = ? WHERE id = ?'),
     partnerOf: db.prepare('SELECT id, name FROM guests WHERE pair_id = ? AND id != ?'),
+    pointsOf: db.prepare('SELECT COALESCE(SUM(delta), 0) AS points FROM point_events WHERE guest_id = ?'),
+    insertPoints: db.prepare('INSERT INTO point_events (guest_id, delta, reason) VALUES (?, ?, ?)'),
+    guestsWithPoints: db.prepare(`
+      SELECT g.id, g.name, g.pair_id, COALESCE(SUM(p.delta), 0) AS points
+      FROM guests g LEFT JOIN point_events p ON p.guest_id = g.id
+      GROUP BY g.id ORDER BY points DESC, g.id`),
+    feed: db.prepare(`
+      SELECT p.id, p.guest_id, g.name, p.delta, p.reason, p.created_at
+      FROM point_events p JOIN guests g ON g.id = p.guest_id
+      ORDER BY p.id DESC LIMIT ?`),
   };
 
   function requireGuest(id) {
@@ -53,7 +65,8 @@ export function createStore(db, { pick = (n) => randomInt(n) } = {}) {
     return {
       id: guest.id,
       name: guest.name,
-      partner: partner && { id: partner.id, name: partner.name },
+      points: q.pointsOf.get(guest.id).points,
+      partner: partner && { id: partner.id, name: partner.name, points: q.pointsOf.get(partner.id).points },
     };
   }
 
@@ -85,5 +98,53 @@ export function createStore(db, { pick = (n) => randomInt(n) } = {}) {
     return guest ? describeGuest(guest) : null;
   }
 
-  return { register, guestByToken };
+  /** Gives (or with a negative delta, takes away) points from a guest. */
+  function addPoints(guestId, delta, reason = '') {
+    const guest = requireGuest(guestId);
+    const amount = Number(delta);
+    if (!Number.isInteger(amount) || amount === 0 || Math.abs(amount) > MAX_POINTS_PER_EVENT) {
+      throw new StoreError(400, `Poeng må være et heltall mellom -${MAX_POINTS_PER_EVENT} og ${MAX_POINTS_PER_EVENT}, men ikke 0`);
+    }
+    const text = normalizeName(reason).slice(0, 80);
+    const id = Number(q.insertPoints.run(guest.id, amount, text).lastInsertRowid);
+    return { id, guestId: guest.id, name: guest.name, delta: amount, reason: text };
+  }
+
+  /** Snapshot of everything the scoreboard needs. A pair's total is the sum of both partners. */
+  function getState() {
+    const guests = q.guestsWithPoints.all().map((g) => ({
+      id: g.id,
+      name: g.name,
+      points: g.points,
+      pairId: g.pair_id,
+    }));
+
+    const pairsById = new Map();
+    for (const g of guests) {
+      if (g.pairId == null) continue;
+      if (!pairsById.has(g.pairId)) pairsById.set(g.pairId, { id: g.pairId, members: [], total: 0 });
+      const pair = pairsById.get(g.pairId);
+      pair.members.push({ id: g.id, name: g.name, points: g.points });
+      pair.total += g.points;
+    }
+    const pairs = [...pairsById.values()].sort((a, b) => b.total - a.total || a.id - b.id);
+
+    const feed = q.feed.all(FEED_LENGTH).map((e) => ({
+      id: e.id,
+      guestId: e.guest_id,
+      name: e.name,
+      delta: e.delta,
+      reason: e.reason,
+      at: e.created_at,
+    }));
+
+    return {
+      guests,
+      pairs,
+      waiting: guests.filter((g) => g.pairId == null).map(({ id, name }) => ({ id, name })),
+      feed,
+    };
+  }
+
+  return { register, guestByToken, addPoints, getState };
 }
