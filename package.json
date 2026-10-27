@@ -1,0 +1,19 @@
+{
+  "name": "karin-bursdag",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Glitter & glam-nettside for bursdagsfest med dansepartnere og poeng",
+  "type": "module",
+  "main": "server/index.js",
+  "engines": {
+    "node": ">=22.13"
+  },
+  "scripts": {
+    "start": "node --disable-warning=ExperimentalWarning server/index.js",
+    "dev": "node --disable-warning=ExperimentalWarning --watch server/index.js",
+    "test": "node --disable-warning=ExperimentalWarning --test test/"
+  },
+  "dependencies": {
+    "express": "^5.3.0"
+  }
+}
