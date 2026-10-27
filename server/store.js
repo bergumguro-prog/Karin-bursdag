@@ -29,6 +29,9 @@ export function createStore(db, { pick = (n) => randomInt(n) } = {}) {
     waiting: db.prepare('SELECT id FROM guests WHERE pair_id IS NULL AND id != ? ORDER BY id'),
     insertPair: db.prepare('INSERT INTO pairs DEFAULT VALUES'),
     setPair: db.prepare('UPDATE guests SET pair_id = ? WHERE id = ?'),
+    pairById: db.prepare('SELECT id FROM pairs WHERE id = ?'),
+    deletePair: db.prepare('DELETE FROM pairs WHERE id = ?'),
+    deleteGuest: db.prepare('DELETE FROM guests WHERE id = ?'),
     partnerOf: db.prepare('SELECT id, name FROM guests WHERE pair_id = ? AND id != ?'),
     pointsOf: db.prepare('SELECT COALESCE(SUM(delta), 0) AS points FROM point_events WHERE guest_id = ?'),
     insertPoints: db.prepare('INSERT INTO point_events (guest_id, delta, reason) VALUES (?, ?, ?)'),
@@ -146,5 +149,38 @@ export function createStore(db, { pick = (n) => randomInt(n) } = {}) {
     };
   }
 
-  return { register, guestByToken, addPoints, getState };
+  /** Admin: locks two guests together. Their previous partners are left waiting. */
+  function pairGuests(aId, bId) {
+    if (Number(aId) === Number(bId)) throw new StoreError(400, 'Velg to forskjellige gjester');
+    const a = requireGuest(aId);
+    const b = requireGuest(bId);
+    if (a.pair_id != null && a.pair_id === b.pair_id) throw new StoreError(400, 'De er allerede dansepartnere');
+    return transaction(db, () => {
+      dissolvePair(a.pair_id);
+      dissolvePair(b.pair_id);
+      return createPair(a.id, b.id);
+    });
+  }
+
+  /** Admin: splits a pair, leaving both guests waiting. */
+  function splitPair(pairId) {
+    if (!q.pairById.get(pairId)) throw new StoreError(404, 'Fant ikke paret');
+    dissolvePair(pairId);
+  }
+
+  /** Admin: removes a guest and their points. Their partner is left waiting. */
+  function removeGuest(guestId) {
+    const guest = requireGuest(guestId);
+    transaction(db, () => {
+      dissolvePair(guest.pair_id);
+      q.deleteGuest.run(guest.id);
+    });
+  }
+
+  function dissolvePair(pairId) {
+    // guests.pair_id is ON DELETE SET NULL, so the members become waiting
+    if (pairId != null) q.deletePair.run(pairId);
+  }
+
+  return { register, guestByToken, addPoints, getState, pairGuests, splitPair, removeGuest };
 }
