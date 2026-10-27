@@ -1,19 +1,25 @@
 import express from 'express';
 import { fileURLToPath } from 'node:url';
+import { createHub } from './events.js';
 import { createStore, StoreError } from './store.js';
 
 const PUBLIC_DIR = fileURLToPath(new URL('../public', import.meta.url));
 
-export function createApp({ db, config, store = createStore(db) }) {
+export function createApp({ db, config, store = createStore(db), hub = createHub() }) {
   const app = express();
   app.use(express.json());
+
+  /** Pushes the fresh state to every connected screen. */
+  const publishState = () => hub.broadcast('state', store.getState());
 
   app.get('/api/config', (_req, res) => {
     res.json({ eventTitle: config.eventTitle });
   });
 
   app.post('/api/register', (req, res) => {
-    res.status(201).json(store.register(req.body?.name));
+    const result = store.register(req.body?.name);
+    publishState();
+    res.status(201).json(result);
   });
 
   app.get('/api/me', (req, res) => {
@@ -21,6 +27,12 @@ export function createApp({ db, config, store = createStore(db) }) {
     if (!guest) throw new StoreError(401, 'Ukjent gjest');
     res.json(guest);
   });
+
+  app.get('/api/state', (_req, res) => {
+    res.json(store.getState());
+  });
+
+  app.get('/api/events', hub.handler(() => store.getState()));
 
   app.use(express.static(PUBLIC_DIR));
 
