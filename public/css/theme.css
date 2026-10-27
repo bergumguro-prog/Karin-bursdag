@@ -1,0 +1,446 @@
+/* ==========================================================================
+   Glitter & Glam – design tokens, base and shared components
+   ========================================================================== */
+
+:root {
+  --ink: #050407;
+  --night: #0c0a10;
+  --plum: #1a1220;
+  --champagne: #f4ead5;
+  --champagne-dim: #b9ad95;
+  --muted: #7d7464;
+
+  --gold-1: #fff3c4;
+  --gold-2: #f1d27a;
+  --gold-3: #d4af37;
+  --gold-4: #a67c1b;
+  --gold-5: #6e4f0e;
+  --gold: var(--gold-3);
+  --gold-gradient: linear-gradient(
+    115deg,
+    var(--gold-4) 0%,
+    var(--gold-2) 22%,
+    var(--gold-1) 34%,
+    var(--gold-3) 48%,
+    var(--gold-4) 62%,
+    var(--gold-2) 80%,
+    var(--gold-1) 90%,
+    var(--gold-3) 100%
+  );
+  --silver-gradient: linear-gradient(115deg, #8a8a92, #f2f2f6 35%, #b8b8c2 55%, #fafafa 80%, #8a8a92);
+  --bronze-gradient: linear-gradient(115deg, #7a4a22, #e6a96b 35%, #a8683a 55%, #f0c08f 80%, #7a4a22);
+
+  --glass: rgba(255, 244, 214, 0.035);
+  --glass-strong: rgba(255, 244, 214, 0.07);
+  --hairline: rgba(212, 175, 55, 0.28);
+  --glow: 0 0 24px rgba(241, 210, 122, 0.25), 0 0 64px rgba(212, 175, 55, 0.12);
+  --danger: #e2766b;
+
+  --font-display: 'Playfair Display', 'Didot', 'Bodoni 72', Georgia, serif;
+  --font-deco: 'Josefin Sans', 'Futura', 'Avenir Next', system-ui, sans-serif;
+
+  --radius: 18px;
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+
+  color-scheme: dark;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+  -webkit-tap-highlight-color: transparent;
+}
+
+body {
+  margin: 0;
+  min-height: 100dvh;
+  background:
+    radial-gradient(ellipse 80% 60% at 50% -10%, rgba(212, 175, 55, 0.16), transparent 60%),
+    radial-gradient(ellipse 60% 50% at 100% 100%, rgba(110, 79, 14, 0.22), transparent 70%),
+    radial-gradient(ellipse 50% 40% at 0% 80%, rgba(60, 30, 70, 0.35), transparent 70%),
+    var(--ink);
+  background-attachment: fixed;
+  color: var(--champagne);
+  font-family: var(--font-deco);
+  font-weight: 300;
+  line-height: 1.5;
+  overflow-x: hidden;
+}
+
+/* Fine film grain over everything for a velvety, expensive feel */
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 100;
+  opacity: 0.06;
+  mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+#sparkles {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 0;
+}
+
+#burst {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 90;
+}
+
+button,
+input,
+select {
+  font: inherit;
+  color: inherit;
+}
+
+:focus-visible {
+  outline: 2px solid var(--gold-2);
+  outline-offset: 3px;
+}
+
+/* ---------- Typography ---------- */
+
+.gold-text {
+  background: var(--gold-gradient);
+  background-size: 250% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: shimmer 7s linear infinite;
+}
+
+@keyframes shimmer {
+  from { background-position: 0% 50%; }
+  to { background-position: 250% 50%; }
+}
+
+.eyebrow {
+  font-family: var(--font-deco);
+  font-weight: 400;
+  font-size: 0.72rem;
+  letter-spacing: 0.42em;
+  text-transform: uppercase;
+  color: var(--champagne-dim);
+  margin: 0;
+}
+
+.display {
+  font-family: var(--font-display);
+  font-weight: 400;
+  font-style: italic;
+  line-height: 0.95;
+  margin: 0;
+}
+
+.numeral {
+  font-family: var(--font-display);
+  font-variant-numeric: lining-nums tabular-nums;
+  font-weight: 500;
+}
+
+/* ---------- Art deco ornament ---------- */
+
+.ornament {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  color: var(--gold);
+  margin: 18px auto;
+  width: min(280px, 80%);
+}
+
+.ornament::before,
+.ornament::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--gold-3), transparent);
+}
+
+.ornament svg {
+  width: 22px;
+  height: 22px;
+  flex: none;
+  filter: drop-shadow(0 0 6px rgba(241, 210, 122, 0.6));
+}
+
+/* ---------- Glass card with gold hairline border ---------- */
+
+.card {
+  position: relative;
+  background: linear-gradient(160deg, var(--glass-strong), var(--glass) 40%, rgba(0, 0, 0, 0.25));
+  border-radius: var(--radius);
+  padding: 24px;
+  backdrop-filter: blur(14px) saturate(120%);
+  -webkit-backdrop-filter: blur(14px) saturate(120%);
+  box-shadow: 0 30px 60px -30px rgba(0, 0, 0, 0.8), inset 0 1px 0 rgba(255, 243, 196, 0.06);
+  isolation: isolate;
+}
+
+.card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1px;
+  background: linear-gradient(140deg, rgba(255, 243, 196, 0.55), rgba(212, 175, 55, 0.12) 30%, rgba(212, 175, 55, 0.06) 60%, rgba(241, 210, 122, 0.45));
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+  z-index: -1;
+}
+
+/* ---------- Buttons ---------- */
+
+.btn {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  min-height: 52px;
+  padding: 0 30px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--gold-gradient);
+  background-size: 250% 100%;
+  color: #1c1405;
+  font-family: var(--font-deco);
+  font-weight: 600;
+  font-size: 0.82rem;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  cursor: pointer;
+  overflow: hidden;
+  box-shadow: var(--glow), inset 0 1px 0 rgba(255, 255, 255, 0.5), inset 0 -2px 6px rgba(110, 79, 14, 0.35);
+  transition: transform 0.4s var(--ease-spring), box-shadow 0.4s var(--ease-out), background-position 1.2s var(--ease-out);
+}
+
+.btn::after {
+  /* light sweep */
+  content: '';
+  position: absolute;
+  inset: -50% auto -50% -60%;
+  width: 40%;
+  background: linear-gradient(100deg, transparent, rgba(255, 255, 255, 0.75), transparent);
+  transform: skewX(-20deg) translateX(-150%);
+  animation: sweep 4.5s var(--ease-out) infinite;
+}
+
+@keyframes sweep {
+  0%, 55% { transform: skewX(-20deg) translateX(-150%); }
+  100% { transform: skewX(-20deg) translateX(650%); }
+}
+
+.btn:hover {
+  transform: translateY(-2px) scale(1.02);
+  background-position: 100% 50%;
+  box-shadow: 0 0 34px rgba(241, 210, 122, 0.45), 0 0 90px rgba(212, 175, 55, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.5);
+}
+
+.btn:active {
+  transform: scale(0.97);
+}
+
+.btn:disabled {
+  opacity: 0.55;
+  cursor: progress;
+}
+
+.btn-ghost {
+  background: transparent;
+  color: var(--gold-2);
+  box-shadow: inset 0 0 0 1px var(--hairline);
+}
+
+.btn-ghost::after {
+  display: none;
+}
+
+.btn-ghost:hover {
+  background: rgba(212, 175, 55, 0.08);
+  box-shadow: inset 0 0 0 1px var(--gold-3), 0 0 24px rgba(212, 175, 55, 0.18);
+}
+
+/* ---------- Inputs ---------- */
+
+.field {
+  position: relative;
+  display: block;
+}
+
+.field input {
+  width: 100%;
+  padding: 18px 4px 12px;
+  background: transparent;
+  border: 0;
+  border-bottom: 1px solid var(--hairline);
+  font-family: var(--font-display);
+  font-style: italic;
+  font-size: 1.7rem;
+  text-align: center;
+  color: var(--champagne);
+  caret-color: var(--gold-2);
+  outline: none;
+}
+
+.field input::placeholder {
+  color: rgba(185, 173, 149, 0.35);
+}
+
+.field::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  right: 50%;
+  bottom: 0;
+  height: 2px;
+  background: var(--gold-gradient);
+  box-shadow: 0 0 12px var(--gold-2);
+  transition: left 0.6s var(--ease-out), right 0.6s var(--ease-out);
+}
+
+.field:focus-within::after {
+  left: 0;
+  right: 0;
+}
+
+.form-error {
+  min-height: 1.4em;
+  margin: 12px 0 0;
+  color: var(--danger);
+  font-size: 0.9rem;
+  letter-spacing: 0.04em;
+}
+
+/* ---------- Toasts ---------- */
+
+.toasts {
+  position: fixed;
+  top: max(16px, env(safe-area-inset-top));
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 95;
+  display: grid;
+  gap: 10px;
+  width: min(420px, calc(100% - 32px));
+  pointer-events: none;
+}
+
+.toast {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 18px;
+  border-radius: 14px;
+  background: rgba(20, 15, 10, 0.86);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  box-shadow: inset 0 0 0 1px var(--hairline), 0 18px 40px -12px rgba(0, 0, 0, 0.8);
+  animation: toast-in 0.7s var(--ease-spring) both;
+}
+
+.toast.leaving {
+  animation: toast-out 0.5s var(--ease-out) both;
+}
+
+.toast .delta {
+  font-family: var(--font-display);
+  font-size: 1.5rem;
+  font-weight: 600;
+  min-width: 2.6ch;
+}
+
+.toast .delta.negative {
+  color: var(--danger);
+}
+
+.toast .who {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-size: 1.1rem;
+}
+
+.toast .why {
+  color: var(--champagne-dim);
+  font-size: 0.85rem;
+}
+
+@keyframes toast-in {
+  from { opacity: 0; transform: translateY(-24px) scale(0.92); filter: blur(6px); }
+}
+
+@keyframes toast-out {
+  to { opacity: 0; transform: translateY(-16px) scale(0.96); filter: blur(4px); }
+}
+
+/* ---------- Page transitions ---------- */
+
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: 0.7s;
+  animation-timing-function: var(--ease-out);
+}
+
+::view-transition-old(root) {
+  animation-name: vt-out;
+}
+
+::view-transition-new(root) {
+  animation-name: vt-in;
+}
+
+@keyframes vt-out {
+  to { opacity: 0; transform: scale(0.97); filter: blur(10px); }
+}
+
+@keyframes vt-in {
+  from { opacity: 0; transform: scale(1.03); filter: blur(10px); }
+}
+
+.reveal-up {
+  animation: reveal-up 1s var(--ease-out) both;
+  animation-delay: calc(var(--i, 0) * 110ms);
+}
+
+@keyframes reveal-up {
+  from { opacity: 0; transform: translateY(26px); filter: blur(8px); }
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
