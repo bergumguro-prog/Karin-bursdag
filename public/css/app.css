@@ -373,6 +373,10 @@
   view-transition-name: tabbar;
 }
 
+.tabbar[hidden] {
+  display: none;
+}
+
 .tabbar a {
   position: relative;
   padding: 12px 22px;
@@ -383,6 +387,7 @@
   font-weight: 400;
   letter-spacing: 0.26em;
   text-transform: uppercase;
+  white-space: nowrap;
   transition: color 0.4s var(--ease-out);
 }
 
