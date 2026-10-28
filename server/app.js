@@ -1,7 +1,6 @@
 import express from 'express';
 import { fileURLToPath } from 'node:url';
 import { createAdminAuth } from './auth.js';
-import { transaction } from './db.js';
 import { createHub } from './events.js';
 import { createStore, StoreError } from './store.js';
 
@@ -18,27 +17,32 @@ export function createApp({
   app.set('trust proxy', 1);
   app.use(express.json());
 
-  /** Pushes the fresh state to every connected screen. */
-  const publishState = () => hub.broadcast('state', store.getState());
+  /** Pushes the fresh state to every connected screen (after the response is sent). */
+  const publishState = () =>
+    store
+      .getState()
+      .then((state) => hub.broadcast('state', state))
+      .catch((err) => console.error('Kunne ikke sende oppdatering', err));
+
+  app.get('/healthz', (_req, res) => res.send('ok'));
 
   app.get('/api/config', (_req, res) => {
     res.json({ eventTitle: config.eventTitle });
   });
 
-  app.post('/api/register', (req, res) => {
-    const result = store.register(req.body?.name);
+  app.post('/api/register', async (req, res) => {
+    res.status(201).json(await store.register(req.body?.name));
     publishState();
-    res.status(201).json(result);
   });
 
-  app.get('/api/me', (req, res) => {
-    const guest = store.guestByToken(req.get('X-Guest-Token'));
+  app.get('/api/me', async (req, res) => {
+    const guest = await store.guestByToken(req.get('X-Guest-Token'));
     if (!guest) throw new StoreError(401, 'Ukjent gjest');
     res.json(guest);
   });
 
-  app.get('/api/state', (_req, res) => {
-    res.json(store.getState());
+  app.get('/api/state', async (_req, res) => {
+    res.json(await store.getState());
   });
 
   app.get('/api/events', hub.handler(() => store.getState()));
@@ -55,32 +59,32 @@ export function createApp({
   admin.get('/check', (_req, res) => res.json({ ok: true }));
 
   /** Body: { guestIds: number[], delta: number, reason?: string } */
-  admin.post('/points', (req, res) => {
+  admin.post('/points', async (req, res) => {
     const { guestIds, delta, reason } = req.body ?? {};
     if (!Array.isArray(guestIds) || guestIds.length === 0) throw new StoreError(400, 'Velg minst én gjest');
-    const events = transaction(db, () => guestIds.map((id) => store.addPoints(id, delta, reason)));
+    const events = await store.givePoints(guestIds, delta, reason);
+    res.status(201).json(events);
     hub.broadcast('points', events);
     publishState();
-    res.status(201).json(events);
   });
 
   /** Body: { a: guestId, b: guestId } */
-  admin.post('/pairs', (req, res) => {
-    const pairId = store.pairGuests(req.body?.a, req.body?.b);
-    publishState();
+  admin.post('/pairs', async (req, res) => {
+    const pairId = await store.pairGuests(req.body?.a, req.body?.b);
     res.status(201).json({ pairId });
+    publishState();
   });
 
-  admin.delete('/pairs/:id', (req, res) => {
-    store.splitPair(Number(req.params.id));
-    publishState();
+  admin.delete('/pairs/:id', async (req, res) => {
+    await store.splitPair(Number(req.params.id));
     res.status(204).end();
+    publishState();
   });
 
-  admin.delete('/guests/:id', (req, res) => {
-    store.removeGuest(Number(req.params.id));
-    publishState();
+  admin.delete('/guests/:id', async (req, res) => {
+    await store.removeGuest(Number(req.params.id));
     res.status(204).end();
+    publishState();
   });
 
   app.use('/api/admin', admin);

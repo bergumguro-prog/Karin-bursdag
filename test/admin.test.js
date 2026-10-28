@@ -7,44 +7,56 @@ import { createStore } from '../server/store.js';
 
 // ---- Store: admin changes to pairs ----
 
-function fourGuests() {
-  const store = createStore(openDb(':memory:'));
-  const [a, b, c, d] = ['A', 'B', 'C', 'D'].map((n) => store.register(n));
-  return { store, a, b, c, d };
+async function fourGuests() {
+  const store = createStore(await openDb({ url: ':memory:' }));
+  const regs = [];
+  for (const n of ['A', 'B', 'C', 'D']) regs.push(await store.register(n));
+  return { store, a: regs[0], b: regs[1], c: regs[2], d: regs[3] };
 }
 
-const partnerName = (store, reg) => store.guestByToken(reg.token).partner?.name ?? null;
+const partnerName = async (store, reg) => (await store.guestByToken(reg.token))?.partner?.name ?? null;
 
-test('admin kan pare om gjester – tidligere partnere blir ventende', () => {
-  const { store, a, b, c, d } = fourGuests(); // A+B, C+D
-  store.pairGuests(a.guest.id, c.guest.id);
-  assert.equal(partnerName(store, a), 'C');
-  assert.equal(partnerName(store, b), null);
-  assert.equal(partnerName(store, d), null);
-  assert.deepEqual(store.getState().waiting.map((g) => g.name), ['B', 'D']);
+test('admin kan pare om gjester – tidligere partnere blir ventende', async () => {
+  const { store, a, b, c, d } = await fourGuests(); // A+B, C+D
+  await store.pairGuests(a.guest.id, c.guest.id);
+  assert.equal(await partnerName(store, a), 'C');
+  assert.equal(await partnerName(store, b), null);
+  assert.equal(await partnerName(store, d), null);
+  assert.deepEqual((await store.getState()).waiting.map((g) => g.name), ['B', 'D']);
 });
 
-test('admin kan splitte et par, poengene beholdes', () => {
-  const { store, a, b } = fourGuests();
-  store.addPoints(a.guest.id, 5);
-  const pairId = store.getState().pairs.find((p) => p.members.some((m) => m.name === 'A')).id;
-  store.splitPair(pairId);
-  assert.equal(partnerName(store, a), null);
-  assert.equal(partnerName(store, b), null);
-  assert.equal(store.guestByToken(a.token).points, 5);
+test('admin kan pare en ventende gjest uten å påvirke andre par', async () => {
+  const { store, a, b, c } = await fourGuests();
+  const e = await store.register('E'); // waiting
+  await store.pairGuests(e.guest.id, a.guest.id);
+  assert.equal(await partnerName(store, e), 'A');
+  assert.equal(await partnerName(store, c), 'D');
+  assert.equal(await partnerName(store, b), null);
 });
 
-test('fjernet gjest forsvinner og partneren venter', () => {
-  const { store, a, b } = fourGuests();
-  store.removeGuest(a.guest.id);
-  assert.equal(store.guestByToken(a.token), null);
-  assert.equal(partnerName(store, b), null);
+test('admin kan splitte et par, poengene beholdes', async () => {
+  const { store, a, b } = await fourGuests();
+  await store.addPoints(a.guest.id, 5);
+  const pairId = (await store.getState()).pairs.find((p) => p.members.some((m) => m.name === 'A')).id;
+  await store.splitPair(pairId);
+  assert.equal(await partnerName(store, a), null);
+  assert.equal(await partnerName(store, b), null);
+  assert.equal((await store.guestByToken(a.token)).points, 5);
 });
 
-test('kan ikke pare en gjest med seg selv eller eksisterende partner', () => {
-  const { store, a, b } = fourGuests();
-  assert.throws(() => store.pairGuests(a.guest.id, a.guest.id), (e) => e.status === 400);
-  assert.throws(() => store.pairGuests(a.guest.id, b.guest.id), (e) => e.status === 400);
+test('fjernet gjest forsvinner med poengene sine, og partneren venter', async () => {
+  const { store, a, b } = await fourGuests();
+  await store.addPoints(a.guest.id, 3);
+  await store.removeGuest(a.guest.id);
+  assert.equal(await store.guestByToken(a.token), null);
+  assert.equal(await partnerName(store, b), null);
+  assert.equal((await store.getState()).feed.length, 0);
+});
+
+test('kan ikke pare en gjest med seg selv eller eksisterende partner', async () => {
+  const { store, a, b } = await fourGuests();
+  await assert.rejects(store.pairGuests(a.guest.id, a.guest.id), (e) => e.status === 400);
+  await assert.rejects(store.pairGuests(a.guest.id, b.guest.id), (e) => e.status === 400);
 });
 
 // ---- Auth ----
@@ -71,7 +83,7 @@ test('feil PIN blir avvist og rate-limitet', () => {
 
 let server, base;
 before(async () => {
-  const app = createApp({ db: openDb(':memory:'), config: { adminPin: '4321', eventTitle: 'Test' } });
+  const app = createApp({ db: await openDb({ url: ':memory:' }), config: { adminPin: '4321', eventTitle: 'Test' } });
   await new Promise((resolve) => (server = app.listen(0, resolve)));
   base = `http://localhost:${server.address().port}`;
 });

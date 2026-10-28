@@ -14,9 +14,9 @@ export function createHub() {
   }
 
   return {
-    /** Express handler for GET /api/events. `initial()` is sent straight after connecting. */
+    /** Express handler for GET /api/events. `initial()` (async) is sent straight after connecting. */
     handler(initial) {
-      return (req, res) => {
+      return async (req, res) => {
         res.set({
           'Content-Type': 'text/event-stream',
           'Cache-Control': 'no-cache, no-transform',
@@ -25,9 +25,9 @@ export function createHub() {
         });
         res.flushHeaders();
         res.write('retry: 2000\n\n');
-        send(res, 'state', initial());
-        clients.add(res);
         req.on('close', () => clients.delete(res));
+        send(res, 'state', await initial());
+        if (!req.destroyed) clients.add(res);
       };
     },
 

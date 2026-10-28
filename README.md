@@ -21,7 +21,7 @@ Glitter & glam-nettside for bursdagsfesten. Gjestene registrerer navnet sitt, bl
 
 ## Kjøre lokalt
 
-Krever Node.js 22.13 eller nyere (bruker innebygd `node:sqlite`).
+Krever Node.js 22.13 eller nyere.
 
 ```bash
 npm install
@@ -30,6 +30,8 @@ npm run dev            # http://localhost:3000
 npm test
 ```
 
+Lokalt lagres alt i en SQLite-fil (`data/bursdag.db`). Slett filen for å nullstille.
+
 ### Miljøvariabler
 
 | Variabel | Standard | Beskrivelse |
@@ -37,18 +39,36 @@ npm test
 | `ADMIN_PIN` | `1234` | Felles PIN for admin. **Bytt denne før festen!** Endrer du den, logges alle admins ut. |
 | `EVENT_TITLE` | `Karins bursdag` | Tittelen på forsiden |
 | `PORT` | `3000` | Porten serveren lytter på |
-| `DB_PATH` | `data/bursdag.db` | Hvor SQLite-databasen lagres |
+| `DB_PATH` | `data/bursdag.db` | Lokal SQLite-fil, brukes når Turso ikke er satt opp |
+| `TURSO_DATABASE_URL` | – | Turso-database (`libsql://…`). Når denne er satt, brukes Turso. |
+| `TURSO_AUTH_TOKEN` | – | Token for Turso-databasen |
 
-## Ta den i bruk på festen
+## Legge den på nett gratis (Render + Turso)
 
-**Alternativ A: fra en laptop på festen (enklest, gratis).** Kjør `npm start` på en laptop, og la gjestene koble seg til samme Wi-Fi. Finn laptopens IP-adresse (`ipconfig getifaddr en0` på Mac) og del `http://<ip>:3000` som en QR-kode. Koble laptopen til en TV og åpne `/#/tv`.
+Gjestene kobler seg til med mobildata, uten Wi-Fi. Render kjører serveren og Turso lagrer dataene, og begge har gratisplaner. Sjekk gjerne gjeldende vilkår på sidene deres.
 
-**Alternativ B: på nett.** Appen er en vanlig Node-server og kan kjøres hos for eksempel [Railway](https://railway.app), [Render](https://render.com) eller [Fly.io](https://fly.io):
+**1. Lag databasen i Turso**
 
-- Byggkommando: `npm install`. Startkommando: `npm start`.
-- Sett `ADMIN_PIN` (og eventuelt `EVENT_TITLE`).
-- Legg til en **persistent disk/volum**, monter den for eksempel på `/data`, og sett `DB_PATH=/data/bursdag.db`. Uten den forsvinner dataene ved omstart.
+1. Lag en konto på [turso.tech](https://turso.tech).
+2. Lag en database, for eksempel `karin-bursdag`, i en region i Europa.
+3. Kopier **database-URL-en** (`libsql://…`) og lag et **token** (*Create token*). Begge trengs i neste steg.
+
+Tabellene opprettes automatisk første gang appen starter.
+
+**2. Deploy til Render**
+
+1. Lag en konto på [render.com](https://render.com) og koble til GitHub.
+2. Velg **New → Blueprint** og velg dette repoet. `render.yaml` setter opp alt.
+3. Fyll inn `ADMIN_PIN`, `TURSO_DATABASE_URL` og `TURSO_AUTH_TOKEN` når du blir spurt.
+4. Etter et par minutter får du en adresse som `https://karin-bursdag.onrender.com`. Lag en QR-kode av den.
+
+**Greit å vite om gratisplanen hos Render**
+
+- Serveren sovner etter rundt 15 minutter uten besøk, og første besøk etterpå tar opptil ett minutt. **Åpne siden selv en stund før gjestene kommer**, så er den våken. Under festen holder gjestenes åpne sider den i gang.
+- Starter serveren på nytt, går det fint: alt ligger i Turso. Gjestene kobler seg til igjen automatisk.
 - Kjør bare **én** instans, fordi sanntidsoppdateringene holdes i minnet på serveren.
+
+**Alternativ: fra en laptop.** Kjør `npm start` på en laptop og del adressen på samme Wi-Fi, eller bruk `cloudflared tunnel --url http://localhost:3000` for en gratis offentlig adresse (den endres ved hver omstart).
 
 ## Brukerveiledning for admin
 
@@ -60,7 +80,7 @@ npm test
 
 ## Teknisk
 
-- `server/`: Express 5, SQLite (`node:sqlite`), Server-Sent Events for live-oppdateringer
+- `server/`: Express 5, SQLite/Turso via `@libsql/client`, Server-Sent Events for live-oppdateringer
   - `store.js`: all spillogikk (registrering, paring, poeng, toppliste)
   - `auth.js`: admin-PIN med signerte tokens (HMAC, gyldig i 24 timer) og rate-limiting
   - `events.js`: SSE-hub

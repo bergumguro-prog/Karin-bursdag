@@ -33,7 +33,8 @@ function createRankedList(ol) {
         els.set(row.key, el);
       }
       const rank = rankList[i];
-      el.dataset.rank = rank <= 3 ? rank : '';
+      // No medals or crown until someone has actually scored
+      el.dataset.rank = rank <= 3 && row.score > 0 ? rank : '';
       el.classList.toggle('is-me', Boolean(row.highlight));
       el.querySelector('.place').textContent = rank;
       const who = el.querySelector('.who');

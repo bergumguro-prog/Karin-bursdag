@@ -1,7 +1,9 @@
 import { mkdirSync } from 'node:fs';
 import { dirname } from 'node:path';
-import { DatabaseSync } from 'node:sqlite';
+import { createClient } from '@libsql/client';
 
+// Foreign keys aren't guaranteed to be enforced on a hosted database,
+// so the store cleans up related rows itself instead of relying on cascades.
 const SCHEMA = `
   CREATE TABLE IF NOT EXISTS pairs (
     id         INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -13,13 +15,13 @@ const SCHEMA = `
     name       TEXT NOT NULL,
     name_key   TEXT NOT NULL UNIQUE,
     token      TEXT NOT NULL UNIQUE,
-    pair_id    INTEGER REFERENCES pairs(id) ON DELETE SET NULL,
+    pair_id    INTEGER REFERENCES pairs(id),
     created_at TEXT NOT NULL DEFAULT (datetime('now'))
   );
 
   CREATE TABLE IF NOT EXISTS point_events (
     id         INTEGER PRIMARY KEY AUTOINCREMENT,
-    guest_id   INTEGER NOT NULL REFERENCES guests(id) ON DELETE CASCADE,
+    guest_id   INTEGER NOT NULL REFERENCES guests(id),
     delta      INTEGER NOT NULL,
     reason     TEXT NOT NULL DEFAULT '',
     created_at TEXT NOT NULL DEFAULT (datetime('now'))
@@ -29,24 +31,13 @@ const SCHEMA = `
   CREATE INDEX IF NOT EXISTS idx_points_guest ON point_events(guest_id);
 `;
 
-/** Opens (and migrates) the database. Pass ':memory:' for tests. */
-export function openDb(path) {
-  if (path !== ':memory:') mkdirSync(dirname(path), { recursive: true });
-  const db = new DatabaseSync(path);
-  db.exec('PRAGMA foreign_keys = ON; PRAGMA journal_mode = WAL;');
-  db.exec(SCHEMA);
+/**
+ * Opens (and migrates) the database.
+ * `url` is a Turso URL (libsql://…) in production, `file:path.db` locally or ':memory:' in tests.
+ */
+export async function openDb({ url, authToken }) {
+  if (url.startsWith('file:')) mkdirSync(dirname(url.slice('file:'.length)), { recursive: true });
+  const db = createClient({ url, authToken });
+  await db.executeMultiple(SCHEMA);
   return db;
-}
-
-/** Runs fn inside a transaction, rolling back on error. */
-export function transaction(db, fn) {
-  db.exec('BEGIN');
-  try {
-    const result = fn();
-    db.exec('COMMIT');
-    return result;
-  } catch (err) {
-    db.exec('ROLLBACK');
-    throw err;
-  }
 }
