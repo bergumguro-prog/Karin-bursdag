@@ -45,9 +45,8 @@ function renderWelcome() {
   show(
     'welcome',
     `
-    <p class="eyebrow reveal-up" style="--i:0">Du er invitert til</p>
     <h1 class="display hero-title gold-text reveal-up" style="--i:1">${escapeHtml(app.title)}</h1>
-    <p class="eyebrow hero-sub reveal-up" style="--i:2">Glitter &amp; Glam</p>
+    <p class="eyebrow hero-sub reveal-up" style="--i:2">Skal vi danse</p>
     <div class="reveal-up" style="--i:3">${ornament()}</div>
     <form class="card register reveal-up" style="--i:4" novalidate>
       <label>
@@ -57,7 +56,7 @@ function renderWelcome() {
       <p class="form-error" role="alert"></p>
       <button class="btn" type="submit">Finn min dansepartner</button>
     </form>
-    <p class="fineprint reveal-up" style="--i:5">Du blir tilfeldig paret med en annen gjest. Dere er dansepartnere resten av kvelden – og samler poeng sammen.</p>
+    <p class="fineprint reveal-up" style="--i:5">Du blir tilfeldig paret med en annen gjest. Dere er dansepartnere og drinkbuddies resten av kvelden – og samler poeng sammen.</p>
   `,
     () => {
       const form = view.querySelector('form');
@@ -105,7 +104,7 @@ function renderWaiting({ me }) {
 
 function renderMine({ me, partner, pair, rank, pairCount }) {
   const build = () => `
-    <p class="eyebrow reveal-up" style="--i:0">Dansepartnere</p>
+    <p class="eyebrow reveal-up" style="--i:0">Dansepartnere &amp; drinkbuddies</p>
     <div class="couple">
       <h1 class="display name gold-text reveal-up" style="--i:1">${escapeHtml(me.name)}</h1>
       <span class="amp reveal-up" style="--i:2">&amp;</span>
@@ -221,7 +220,7 @@ function playReveal(partnerName) {
       <div class="slot"><div class="slot-reel">${reel.map((n) => `<div>${escapeHtml(n)}</div>`).join('')}</div></div>
       <div class="after">
         ${ornament()}
-        <p>Dere er nå låst sammen for kvelden.<br>Finn hverandre på dansegulvet!</p>
+        <p>Dere er dansepartnere og drinkbuddies!<br>Finn hverandre på dansegulvet – og i baren 🥂</p>
         <button class="btn" type="button">Se paret vårt</button>
       </div>
     </div>`;

@@ -255,6 +255,7 @@
 
 .reveal .after p {
   color: var(--champagne-dim);
+  text-wrap: balance;
   margin: 0 0 26px;
 }
 
